@@ -1,0 +1,11 @@
+firebase-functions
+firebase-admin
+google-cloud-firestore
+Flask
+Werkzeug
+flask-cors
+python-dotenv
+pandas
+openpyxl
+Pillow
+requests

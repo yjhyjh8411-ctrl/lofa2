@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% block title %}LOFA - {{ '신청서 편집' if form_type else '새 신청서' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <a href="/admin/forms" class="back-link fade-in">&larr; 신청서 목록</a>
+
+  {% if success %}
+  <div class="alert alert-success fade-in">{{ success }}</div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-error fade-in">{{ error }}</div>
+  {% endif %}
+
+  <!-- ═══ NEW FORM ═══ -->
+  {% if not form_type %}
+  <h1 class="page-title fade-in">새 신청서 만들기</h1>
+  <p class="page-subtitle fade-in">새로운 복지기금 신청서 양식을 만듭니다</p>
+
+  <div class="editor-card fade-in delay-1">
+    <form method="POST" action="/admin/forms/new">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">영문 ID<span class="req">*</span></label>
+          <input type="text" name="form_id" class="form-input" placeholder="예: housing, medical" required
+                 pattern="[a-z0-9_]+" title="소문자 영문, 숫자, 밑줄만 사용">
+          <p class="form-hint">소문자 영문+숫자+밑줄. 생성 후 변경 불가</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">신청서 이름<span class="req">*</span></label>
+          <input type="text" name="name" class="form-input" placeholder="예: 주택지원" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">아이콘 (이모지)</label>
+          <input type="text" name="icon" class="form-input" value="📋" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">색상</label>
+          <input type="color" name="color" class="form-input" value="#0071e3" style="height:42px;padding:4px">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">설명</label>
+        <input type="text" name="description" class="form-input" placeholder="이 신청서의 용도를 간략히 설명">
+      </div>
+      <div class="form-group">
+        <label class="form-label">연간 한도 (원)</label>
+        <input type="number" name="annual_limit" class="form-input" value="0" min="0" placeholder="0 = 한도 없음">
+        <p class="form-hint">0이면 한도 제한 없음</p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg">생성 후 항목 편집</button>
+    </form>
+  </div>
+
+  {% else %}
+  <!-- ═══ EDIT FORM ═══ -->
+  <div class="editor-header fade-in">
+    <div class="editor-icon" style="background:color-mix(in srgb,{{ form_type.color }} 12%,transparent)">
+      {{ form_type.icon }}
+    </div>
+    <div>
+      <h1 class="page-title" style="font-size:26px">{{ form_type.name }}</h1>
+      <p class="text-sm text-muted">ID: {{ form_type.id }}</p>
+    </div>
+  </div>
+
+  <!-- Form Meta -->
+  <div class="editor-card fade-in delay-1">
+    <h3 class="editor-section-title">기본 정보</h3>
+    <form method="POST" action="/admin/forms/{{ form_type.id }}/edit">
+      <div class="form-row" style="grid-template-columns:1fr 80px 80px">
+        <div class="form-group">
+          <label class="form-label">신청서 이름</label>
+          <input type="text" name="name" class="form-input" value="{{ form_type.name }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">아이콘</label>
+          <input type="text" name="icon" class="form-input" value="{{ form_type.icon }}" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">색상</label>
+          <input type="color" name="color" class="form-input" value="{{ form_type.color }}" style="height:42px;padding:4px">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">설명</label>
+        <input type="text" name="description" class="form-input" value="{{ form_type.description }}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">연간 한도 (원)</label>
+          <input type="number" name="annual_limit" class="form-input" value="{{ form_type.annual_limit or 0 }}" min="0">
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:4px">
+          <label class="checkbox-label" style="font-size:14px">
+            <input type="checkbox" name="is_active" {% if form_type.is_active %}checked{% endif %}>
+            <span>활성화 (메인 화면에 표시)</span>
+          </label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">저장</button>
+    </form>
+  </div>
+
+  <!-- Fields Editor -->
+  <div class="editor-card fade-in delay-2">
+    <div class="section-header" style="margin-bottom:20px">
+      <h3 class="editor-section-title" style="margin:0">입력 항목 ({{ form_type.fields|length }}개)</h3>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('addFieldModal').classList.add('open')">+ 항목 추가</button>
+    </div>
+
+    {% if form_type.fields %}
+    <div class="field-list" id="fieldList">
+      {% for field in form_type.fields %}
+      <div class="field-item" data-id="{{ field.id }}">
+        <div class="field-drag">&#9776;</div>
+        <div class="field-info">
+          <div class="field-header">
+            <span class="field-type-badge">{{ field.type }}</span>
+            <strong>{{ field.label }}</strong>
+            {% if field.required %}<span class="req">*</span>{% endif %}
+          </div>
+          <span class="text-xs text-muted">name: {{ field.name }}{% if field.options %} | 옵션: {{ field.options|join(', ') }}{% endif %}</span>
+        </div>
+        <div class="field-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openFieldEdit('{{ field|tojson|e }}', '{{ form_type.id }}')">편집</button>
+          <form method="POST" action="/admin/forms/{{ form_type.id }}/fields/{{ field.id }}/delete" style="display:inline"
+                onsubmit="return confirm('이 항목을 삭제하시겠습니까?')">
+            <button class="btn btn-ghost btn-sm" style="color:var(--red)">삭제</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty" style="padding:40px">
+      <p class="empty-text">아직 입력 항목이 없습니다</p>
+      <button class="btn btn-primary btn-sm mt-8" onclick="document.getElementById('addFieldModal').classList.add('open')">첫 항목 추가하기</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Preview -->
+  <div class="editor-card fade-in delay-3">
+    <h3 class="editor-section-title">미리보기</h3>
+    <p class="text-sm text-muted mb-16">사용자에게 표시되는 실제 화면입니다</p>
+    <div class="preview-frame">
+      <div class="preview-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="width:40px;height:40px;border-radius:10px;background:color-mix(in srgb,{{ form_type.color }} 12%,transparent);display:flex;align-items:center;justify-content:center;font-size:20px">{{ form_type.icon }}</div>
+          <div>
+            <strong>{{ form_type.name }}</strong>
+            <p class="text-xs text-muted">{{ form_type.description }}</p>
+          </div>
+        </div>
+        {% for field in form_type.fields %}
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px">
+            {{ field.label }}{% if field.required %}<span style="color:var(--red)"> *</span>{% endif %}
+          </label>
+          {% if field.type == 'textarea' %}
+          <div style="height:50px;border:1px solid var(--border);border-radius:8px;background:var(--bg)"></div>
+          {% elif field.type == 'select' or field.type == 'account' %}
+          <div style="height:34px;border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:6px 10px;font-size:12px;color:var(--text-3)">{% if field.type == 'select' %}{{ (field.options or ['선택'])[0] }}{% else %}은행 / 계좌번호 / 예금주{% endif %}</div>
+          {% elif field.type == 'file' %}
+          <div style="height:34px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-3)">파일 선택</div>
+          {% else %}
+          <div style="height:34px;border:1px solid var(--border);border-radius:8px;background:var(--bg)"></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <div style="height:36px;border-radius:980px;background:{{ form_type.color }};margin-top:16px"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add Field Modal -->
+<div class="modal-overlay" id="addFieldModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>항목 추가</h3>
+      <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">&times;</button>
+    </div>
+    <form method="POST" action="/admin/forms/{{ form_type.id if form_type else '' }}/fields/add">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">항목 유형<span class="req">*</span></label>
+          <div class="type-grid" id="typeGrid">
+            <label class="type-option"><input type="radio" name="field_type" value="text" checked><span>텍스트</span><small>한줄 입력</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="textarea"><span>장문</span><small>여러줄 입력</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="number"><span>숫자</span><small>숫자 입력</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="amount"><span>금액</span><small>콤마 포맷</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="date"><span>날짜</span><small>날짜 선택</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="select"><span>드롭다운</span><small>목록 선택</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="radio"><span>라디오</span><small>단일 선택</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="file"><span>파일</span><small>파일 첨부</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="account"><span>계좌</span><small>은행+번호+예금주</small></label>
+            <label class="type-option"><input type="radio" name="field_type" value="checkbox"><span>체크</span><small>동의/확인</small></label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">라벨 (표시명)<span class="req">*</span></label>
+            <input type="text" name="label" class="form-input" placeholder="예: 신청사유" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">필드명 (영문)<span class="req">*</span></label>
+            <input type="text" name="name" class="form-input" placeholder="예: reason" required pattern="[a-z0-9_]+">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">안내문 (placeholder)</label>
+          <input type="text" name="placeholder" class="form-input" placeholder="입력 힌트 텍스트">
+        </div>
+        <div class="form-group">
+          <label class="form-label">도움말</label>
+          <input type="text" name="help_text" class="form-input" placeholder="추가 설명 (선택)">
+        </div>
+        <div class="form-group" id="optionsGroup" style="display:none">
+          <label class="form-label">옵션 (줄바꿈으로 구분)</label>
+          <textarea name="options" class="form-textarea" rows="4" placeholder="옵션1&#10;옵션2&#10;옵션3"></textarea>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" name="required">
+          <span>필수 입력</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('open')">취소</button>
+        <button type="submit" class="btn btn-primary">추가</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Field Modal -->
+<div class="modal-overlay" id="editFieldModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>항목 수정</h3>
+      <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">&times;</button>
+    </div>
+    <form method="POST" id="editFieldForm">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">항목 유형</label>
+          <select name="field_type" id="editFieldType" class="form-select">
+            <option value="text">텍스트</option>
+            <option value="textarea">장문</option>
+            <option value="number">숫자</option>
+            <option value="amount">금액</option>
+            <option value="date">날짜</option>
+            <option value="select">드롭다운</option>
+            <option value="radio">라디오</option>
+            <option value="file">파일</option>
+            <option value="account">계좌</option>
+            <option value="checkbox">체크</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">라벨</label>
+            <input type="text" name="label" id="editFieldLabel" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">필드명</label>
+            <input type="text" name="name" id="editFieldName" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">안내문</label>
+          <input type="text" name="placeholder" id="editFieldPlaceholder" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">도움말</label>
+          <input type="text" name="help_text" id="editFieldHelpText" class="form-input">
+        </div>
+        <div class="form-group" id="editOptionsGroup">
+          <label class="form-label">옵션 (줄바꿈 구분)</label>
+          <textarea name="options" id="editFieldOptions" class="form-textarea" rows="4"></textarea>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" name="required" id="editFieldRequired">
+          <span>필수 입력</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('open')">취소</button>
+        <button type="submit" class="btn btn-primary">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.back-link{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--accent);text-decoration:none;font-weight:500;margin-bottom:20px}
+.back-link:hover{text-decoration:underline}
+
+.editor-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.editor-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+
+.editor-card{
+  background:var(--surface);border-radius:var(--radius-lg);padding:28px;
+  border:1px solid var(--border);margin-bottom:16px;
+}
+.editor-section-title{font-size:16px;font-weight:600;margin-bottom:16px}
+
+/* Type Grid */
+.type-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+@media(max-width:600px){.type-grid{grid-template-columns:repeat(3,1fr)}}
+.type-option{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:10px 6px;border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;transition:var(--transition);text-align:center;
+}
+.type-option:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
+.type-option input{display:none}
+.type-option span{font-size:13px;font-weight:600}
+.type-option small{font-size:10px;color:var(--text-3)}
+
+/* Field List */
+.field-list{display:flex;flex-direction:column;gap:6px}
+.field-item{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  border:1px solid var(--border);border-radius:10px;transition:var(--transition);
+  background:var(--bg);
+}
+.field-item:hover{border-color:var(--accent-light);background:#fff}
+.field-drag{cursor:grab;color:var(--text-3);font-size:14px;flex-shrink:0;user-select:none}
+.field-info{flex:1;min-width:0}
+.field-header{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.field-type-badge{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;background:var(--border);color:var(--text-2);
+}
+.field-actions{display:flex;gap:4px;flex-shrink:0}
+
+.checkbox-label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.checkbox-label input{width:16px;height:16px;accent-color:var(--accent)}
+
+/* Preview */
+.preview-frame{background:var(--bg);border-radius:var(--radius);padding:24px;max-width:400px;margin:0 auto}
+.preview-card{background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border)}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Show/hide options field based on type
+document.querySelectorAll('[name="field_type"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const show = ['select','radio'].includes(r.value);
+    document.getElementById('optionsGroup').style.display = show ? 'block' : 'none';
+  });
+});
+
+function openFieldEdit(jsonStr, formId) {
+  const f = JSON.parse(jsonStr);
+  document.getElementById('editFieldForm').action = `/admin/forms/${formId}/fields/${f.id}/update`;
+  document.getElementById('editFieldType').value = f.type || 'text';
+  document.getElementById('editFieldLabel').value = f.label || '';
+  document.getElementById('editFieldName').value = f.name || '';
+  document.getElementById('editFieldPlaceholder').value = f.placeholder || '';
+  document.getElementById('editFieldHelpText').value = f.help_text || '';
+  document.getElementById('editFieldOptions').value = (f.options || []).join('\n');
+  document.getElementById('editFieldRequired').checked = f.required || false;
+  document.getElementById('editOptionsGroup').style.display = ['select','radio'].includes(f.type) ? 'block' : 'none';
+  document.getElementById('editFieldModal').classList.add('open');
+}
+
+// Edit field type change
+document.getElementById('editFieldType').addEventListener('change', function() {
+  document.getElementById('editOptionsGroup').style.display = ['select','radio'].includes(this.value) ? 'block' : 'none';
+});
+
+// Drag reorder fields
+let dragField = null;
+document.querySelectorAll('.field-drag').forEach(handle => {
+  const item = handle.closest('.field-item');
+  handle.addEventListener('mousedown', () => { item.draggable = true; });
+  item.addEventListener('dragstart', () => { dragField = item; item.style.opacity = '0.4'; });
+  item.addEventListener('dragend', () => {
+    item.style.opacity = '1'; item.draggable = false; dragField = null;
+    saveFieldOrder();
+  });
+  item.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragField && dragField !== item) {
+      const rect = item.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height/2) item.before(dragField);
+      else item.after(dragField);
+    }
+  });
+});
+
+function saveFieldOrder() {
+  const order = [...document.querySelectorAll('.field-item')].map(el => el.dataset.id);
+  const formId = '{{ form_type.id if form_type else "" }}';
+  if (!formId) return;
+  fetch(`/admin/forms/${formId}/fields/reorder`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({order})
+  });
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+{% endblock %}

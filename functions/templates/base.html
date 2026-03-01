@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}LOFA 복지기금{% endblock %}</title>
+<style>
+/* ─── Apple-Inspired Design System ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f7;
+  --surface:#fff;
+  --surface-raised:#fff;
+  --text-1:#1d1d1f;
+  --text-2:#6e6e73;
+  --text-3:#86868b;
+  --accent:#0071e3;
+  --accent-hover:#0077ed;
+  --accent-light:rgba(0,113,227,.08);
+  --green:#34c759;
+  --red:#ff3b30;
+  --orange:#ff9500;
+  --yellow:#ffcc00;
+  --border:rgba(0,0,0,.08);
+  --border-2:rgba(0,0,0,.12);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.12);
+  --shadow-xl:0 16px 48px rgba(0,0,0,.14);
+  --radius:12px;
+  --radius-lg:18px;
+  --radius-xl:24px;
+  --transition:.25s cubic-bezier(.4,0,.2,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Noto Sans KR",sans-serif;
+}
+
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:var(--font);background:var(--bg);color:var(--text-1);line-height:1.5;min-height:100vh}
+
+/* ─── Navigation ──────────────────────────────────────────────────────────── */
+.nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.72);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-inner{
+  max-width:1200px;margin:0 auto;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;height:52px;
+}
+.nav-brand{
+  font-size:18px;font-weight:700;color:var(--text-1);text-decoration:none;
+  letter-spacing:-.02em;
+}
+.nav-brand span{color:var(--accent)}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-link{
+  padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  color:var(--text-2);text-decoration:none;transition:var(--transition);
+}
+.nav-link:hover{background:var(--accent-light);color:var(--accent)}
+.nav-link.active{background:var(--accent);color:#fff}
+.nav-user{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--text-2);
+}
+.nav-user strong{color:var(--text-1);font-weight:600}
+.btn-logout{
+  padding:5px 12px;border-radius:16px;font-size:12px;font-weight:500;
+  border:1px solid var(--border-2);background:transparent;color:var(--text-2);
+  cursor:pointer;transition:var(--transition);text-decoration:none;
+}
+.btn-logout:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* ─── Mobile Nav Toggle ───────────────────────────────────────────────────── */
+.nav-toggle{display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px;color:var(--text-1)}
+@media(max-width:768px){
+  .nav-toggle{display:block}
+  .nav-links{
+    display:none;position:absolute;top:52px;left:0;right:0;
+    flex-direction:column;background:rgba(255,255,255,.95);
+    backdrop-filter:blur(20px);padding:12px;gap:2px;
+    border-bottom:1px solid var(--border);
+  }
+  .nav-links.open{display:flex}
+  .nav-link{padding:10px 16px;border-radius:10px;font-size:15px;width:100%}
+}
+
+/* ─── Layout ──────────────────────────────────────────────────────────────── */
+.container{max-width:1200px;margin:0 auto;padding:32px 24px}
+.container-sm{max-width:560px;margin:0 auto;padding:32px 24px}
+.container-md{max-width:800px;margin:0 auto;padding:32px 24px}
+
+/* ─── Typography ──────────────────────────────────────────────────────────── */
+.page-title{font-size:34px;font-weight:700;letter-spacing:-.025em;color:var(--text-1);margin-bottom:6px}
+.page-subtitle{font-size:17px;color:var(--text-2);font-weight:400;margin-bottom:32px}
+h2{font-size:22px;font-weight:600;letter-spacing:-.015em;margin-bottom:16px}
+h3{font-size:17px;font-weight:600;margin-bottom:12px}
+
+/* ─── Cards ───────────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);border:1px solid var(--border);
+  overflow:hidden;transition:var(--transition);
+}
+.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.card-body{padding:24px}
+.card-flat{box-shadow:none}
+.card-flat:hover{box-shadow:none;transform:none}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 20px;border-radius:980px;font-size:14px;font-weight:500;
+  border:none;cursor:pointer;transition:var(--transition);
+  text-decoration:none;font-family:var(--font);line-height:1.4;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--bg);color:var(--text-1);border:1px solid var(--border-2)}
+.btn-secondary:hover{background:#e8e8ed}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#e0342b}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{background:#2db84e}
+.btn-ghost{background:transparent;color:var(--accent);padding:8px 12px}
+.btn-ghost:hover{background:var(--accent-light)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-lg{padding:14px 28px;font-size:16px}
+.btn-block{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ─── Form Elements ───────────────────────────────────────────────────────── */
+.form-group{margin-bottom:20px}
+.form-label{
+  display:block;font-size:13px;font-weight:600;color:var(--text-1);
+  margin-bottom:6px;letter-spacing:-.01em;
+}
+.form-label .req{color:var(--red);margin-left:2px}
+.form-hint{font-size:12px;color:var(--text-3);margin-top:4px}
+.form-input,.form-select,.form-textarea{
+  width:100%;padding:10px 14px;border:1px solid var(--border-2);
+  border-radius:10px;font-size:15px;font-family:var(--font);
+  background:var(--surface);color:var(--text-1);transition:var(--transition);
+  outline:none;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.12);
+}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--text-3)}
+.form-input:read-only{background:var(--bg);color:var(--text-2);cursor:default}
+.form-textarea{resize:vertical;min-height:80px}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2386868b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+
+/* ─── Alerts ──────────────────────────────────────────────────────────────── */
+.alert{
+  padding:14px 18px;border-radius:var(--radius);font-size:14px;margin-bottom:20px;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.alert-info{background:rgba(0,113,227,.08);color:#0050a0;border:1px solid rgba(0,113,227,.15)}
+.alert-success{background:rgba(52,199,89,.08);color:#1a8a38;border:1px solid rgba(52,199,89,.15)}
+.alert-error{background:rgba(255,59,48,.08);color:#c41e10;border:1px solid rgba(255,59,48,.15)}
+.alert-warning{background:rgba(255,149,0,.08);color:#a86200;border:1px solid rgba(255,149,0,.15)}
+
+/* ─── Badge ───────────────────────────────────────────────────────────────── */
+.badge{
+  display:inline-flex;align-items:center;padding:3px 10px;
+  border-radius:20px;font-size:12px;font-weight:600;
+}
+.badge-pending{background:rgba(255,149,0,.12);color:#a86200}
+.badge-approved{background:rgba(52,199,89,.12);color:#1a8a38}
+.badge-rejected{background:rgba(255,59,48,.12);color:#c41e10}
+.badge-cancelled{background:rgba(142,142,147,.12);color:#636366}
+
+/* ─── Table ───────────────────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead{background:var(--bg)}
+th{padding:10px 14px;text-align:left;font-weight:600;font-size:12px;color:var(--text-2);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+td{padding:12px 14px;border-top:1px solid var(--border);white-space:nowrap}
+tr:hover td{background:rgba(0,113,227,.02)}
+
+/* ─── Modal ───────────────────────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:24px;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--surface);border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-xl);width:100%;max-width:480px;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-header{
+  padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;
+}
+.modal-header h3{margin:0;font-size:18px}
+.modal-close{
+  width:28px;height:28px;border-radius:50%;border:none;
+  background:var(--bg);cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;color:var(--text-2);
+}
+.modal-close:hover{background:#e0e0e5}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 24px;display:flex;gap:8px;justify-content:flex-end}
+
+/* ─── Stats Card ──────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{
+  background:var(--surface);border-radius:var(--radius);padding:20px;
+  border:1px solid var(--border);text-align:center;
+}
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--text-1)}
+.stat-label{font-size:12px;color:var(--text-2);margin-top:4px;font-weight:500}
+
+/* ─── Notice ──────────────────────────────────────────────────────────────── */
+.notice-bar{
+  background:linear-gradient(135deg,#1d1d1f,#2d2d2f);color:#f5f5f7;
+  padding:12px 24px;font-size:14px;text-align:center;
+  border-radius:var(--radius);margin-bottom:24px;
+}
+
+/* ─── Empty State ─────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:var(--text-3)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty-text{font-size:15px}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:2px;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:24px;overflow-x:auto}
+.tab{
+  padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;
+  color:var(--text-2);cursor:pointer;transition:var(--transition);
+  border:none;background:none;white-space:nowrap;font-family:var(--font);
+}
+.tab:hover{color:var(--text-1)}
+.tab.active{background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-sm)}
+
+/* ─── Section Divider ─────────────────────────────────────────────────────── */
+.section{margin-bottom:40px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+
+/* ─── Filters ─────────────────────────────────────────────────────────────── */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;align-items:center}
+.filter-chip{
+  padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  border:1px solid var(--border-2);background:var(--surface);
+  color:var(--text-2);cursor:pointer;transition:var(--transition);
+  text-decoration:none;
+}
+.filter-chip:hover{border-color:var(--accent);color:var(--accent)}
+.filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ─── Toggle ──────────────────────────────────────────────────────────────── */
+.toggle{
+  width:44px;height:26px;border-radius:13px;border:none;padding:2px;
+  background:#d1d1d6;cursor:pointer;transition:var(--transition);
+  position:relative;
+}
+.toggle.on{background:var(--green)}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:22px;height:22px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);transition:var(--transition);
+}
+.toggle.on::after{left:20px}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25)}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease-out both}
+.delay-1{animation-delay:.05s}.delay-2{animation-delay:.1s}.delay-3{animation-delay:.15s}.delay-4{animation-delay:.2s}
+
+/* ─── Utility ─────────────────────────────────────────────────────────────── */
+.text-center{text-align:center}
+.text-right{text-align:right}
+.text-muted{color:var(--text-3)}
+.text-sm{font-size:13px}
+.text-xs{font-size:11px}
+.mt-8{margin-top:8px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}.mt-32{margin-top:32px}
+.mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}.mb-24{margin-bottom:24px}
+.gap-8{gap:8px}.gap-12{gap:12px}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.hidden{display:none!important}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+
+{% if session.get('user_id') %}
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/main" class="nav-brand">LOFA<span>.</span></a>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+    <div class="nav-links">
+      <a href="/main" class="nav-link {% if request.endpoint == 'main_page' %}active{% endif %}">홈</a>
+      <a href="/my_status" class="nav-link {% if request.endpoint == 'my_status' %}active{% endif %}">신청내역</a>
+      {% if session.get('is_admin') %}
+      <a href="/admin" class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">관리</a>
+      <a href="/admin/forms" class="nav-link {% if 'admin_form' in (request.endpoint or '') %}active{% endif %}">신청서관리</a>
+      {% endif %}
+      <div class="nav-user">
+        <span><strong>{{ session.get('user_name','') }}</strong> {{ session.get('user_dept','') }}</span>
+        <a href="/logout" class="btn-logout">로그아웃</a>
+      </div>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block title %}LOFA - 관리자{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="section-header fade-in">
+    <div>
+      <h1 class="page-title">관리자 대시보드</h1>
+      <p class="page-subtitle" style="margin-bottom:0">신청 현황을 관리합니다</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="/download_excel?year={{ selected_year }}" class="btn btn-secondary btn-sm">&#128196; 엑셀 다운로드</a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs fade-in delay-1">
+    <button class="tab active" onclick="switchTab('apps')">신청 관리</button>
+    <button class="tab" onclick="switchTab('users')">직원 관리</button>
+    <button class="tab" onclick="switchTab('sms')">문자 설정</button>
+    <button class="tab" onclick="switchTab('settings')">공지 설정</button>
+  </div>
+
+  <!-- ═══ TAB: Applications ═══ -->
+  <div id="tab-apps" class="tab-content">
+    <!-- Stats -->
+    <div class="stats-grid fade-in delay-2">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">전체 신청</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--orange)">{{ stats.pending }}</div>
+        <div class="stat-label">대기 중</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--green)">{{ stats.approved }}</div>
+        <div class="stat-label">승인</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--red)">{{ stats.rejected }}</div>
+        <div class="stat-label">반려</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ fmt_amount(stats.total_amount) }}</div>
+        <div class="stat-label">승인 총액 (원)</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      {% for y in years %}
+      <a href="/admin?year={{ y }}&status={{ status_filter }}&form={{ form_filter }}" class="filter-chip {% if y == selected_year %}active{% endif %}">{{ y }}년</a>
+      {% endfor %}
+      <span style="width:1px;height:20px;background:var(--border-2)"></span>
+      <a href="/admin?year={{ selected_year }}" class="filter-chip {% if not status_filter %}active{% endif %}">전체</a>
+      <a href="/admin?year={{ selected_year }}&status=대기" class="filter-chip {% if status_filter == '대기' %}active{% endif %}">대기</a>
+      <a href="/admin?year={{ selected_year }}&status=승인" class="filter-chip {% if status_filter == '승인' %}active{% endif %}">승인</a>
+      <a href="/admin?year={{ selected_year }}&status=반려" class="filter-chip {% if status_filter == '반려' %}active{% endif %}">반려</a>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>신청일</th><th>항목</th><th>이름</th><th>부서</th><th>금액</th><th>상태</th><th>처리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in applications %}
+          <tr>
+            <td>{{ app.apply_date[:10] }}</td>
+            <td><strong>{{ app.form_name or '' }}</strong></td>
+            <td>{{ app.user_name }}</td>
+            <td class="text-muted">{{ app.user_dept }}</td>
+            <td style="text-align:right">{{ fmt_amount(app.amount) }}원</td>
+            <td>
+              <span class="badge
+                {% if app.status == '대기' %}badge-pending
+                {% elif app.status == '승인' %}badge-approved
+                {% elif app.status == '반려' %}badge-rejected
+                {% else %}badge-cancelled{% endif %}">{{ app.status }}</span>
+            </td>
+            <td>
+              {% if app.status == '대기' %}
+              <div style="display:flex;gap:4px">
+                <form method="POST" action="/admin_process" style="display:inline">
+                  <input type="hidden" name="app_id" value="{{ app.app_id }}">
+                  <input type="hidden" name="action" value="approve">
+                  <button class="btn btn-success btn-sm">승인</button>
+                </form>
+                <button class="btn btn-danger btn-sm" onclick="openReject('{{ app.app_id }}')">반려</button>
+                <button class="btn btn-ghost btn-sm" onclick="openDetail(this)" data-raw='{{ app.raw_data|tojson if app.raw_data else "{}" }}' data-attachment="{{ app.attachment or '' }}">상세</button>
+              </div>
+              {% elif app.status == '승인' %}
+              <span class="text-sm text-muted">{{ app.processed_at[:10] if app.processed_at else '' }}</span>
+              {% elif app.status == '반려' %}
+              <span class="text-sm text-muted" title="{{ app.reject_reason or '' }}">{{ (app.reject_reason or '')[:20] }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not applications %}
+          <tr><td colspan="7" class="text-center text-muted" style="padding:40px">신청 내역이 없습니다</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: Users ═══ -->
+  <div id="tab-users" class="tab-content hidden">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>사번</th><th>이름</th><th>부서</th><th>직급</th><th>전화번호</th><th>상태</th><th>관리</th></tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr {% if not u.get('is_active', True) %}style="opacity:.5"{% endif %}>
+            <td>{{ u.get('사번','') }}</td>
+            <td><strong>{{ u.get('이름','') }}</strong>{% if u.get('is_admin') %} <span class="badge badge-approved" style="font-size:10px">관리자</span>{% endif %}</td>
+            <td>{{ u.get('부서','') }}</td>
+            <td>{{ u.get('직급','') }}</td>
+            <td>{{ u.get('전화번호','') }}</td>
+            <td>
+              {% if u.get('is_active', True) %}
+              <span class="badge badge-approved">재직</span>
+              {% else %}
+              <span class="badge badge-cancelled">퇴사</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="openUserEdit('{{ u|tojson|e }}')">편집</button>
+              {% if u.get('is_active', True) %}
+              <form method="POST" action="/admin/user/deactivate" style="display:inline" onsubmit="return confirm('퇴사 처리하시겠습니까?')">
+                <input type="hidden" name="user_id" value="{{ u.get('사번','') }}">
+                <button class="btn btn-ghost btn-sm" style="color:var(--red)">퇴사</button>
+              </form>
+              {% else %}
+              <form method="POST" action="/admin/user/restore" style="display:inline">
+                <input type="hidden" name="user_id" value="{{ u.get('사번','') }}">
+                <button class="btn btn-ghost btn-sm" style="color:var(--green)">복직</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SMS ═══ -->
+  <div id="tab-sms" class="tab-content hidden">
+    <div class="card card-flat" style="border:1px solid var(--border);margin-bottom:16px">
+      <div class="card-body">
+        <h3>문자/알림톡 템플릿 설정</h3>
+        <p class="text-sm text-muted mb-16">각 이벤트 발생 시 자동 발송되는 메시지를 설정합니다. 변수: {user_name}, {form_name}, {amount}, {user_dept}, {reject_reason}</p>
+        <form method="POST" action="/admin/sms/update">
+          {% for key, tmpl in sms_templates.items() %}
+          <div class="sms-tmpl-item">
+            <div class="sms-tmpl-header">
+              <label class="form-label" style="margin:0">{{ tmpl.name }}</label>
+              <label class="checkbox-label text-sm">
+                <input type="checkbox" name="sms_{{ key }}_enabled" {% if tmpl.enabled %}checked{% endif %}>
+                <span>활성화</span>
+              </label>
+            </div>
+            <textarea name="sms_{{ key }}_message" class="form-textarea" rows="3">{{ tmpl.message }}</textarea>
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary mt-16">저장</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- SMS Test -->
+    <div class="card card-flat" style="border:1px solid var(--border)">
+      <div class="card-body">
+        <h3>테스트 발송</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">전화번호</label>
+            <input type="tel" id="testPhone" class="form-input" placeholder="010-0000-0000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">메시지</label>
+            <input type="text" id="testMsg" class="form-input" value="[LOFA복지기금] 테스트 메시지입니다.">
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="sendTestSMS()">테스트 발송</button>
+        <span id="testResult" class="text-sm ml-8"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: Settings ═══ -->
+  <div id="tab-settings" class="tab-content hidden">
+    <div class="card card-flat" style="border:1px solid var(--border);margin-bottom:16px">
+      <div class="card-body">
+        <h3>공지사항</h3>
+        <form method="POST" action="/admin/settings/update">
+          <div class="form-group">
+            <textarea name="notice" class="form-textarea" rows="4" placeholder="메인 화면에 표시될 공지사항">{{ notice }}</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">저장</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Init Defaults -->
+    <div class="card card-flat" style="border:1px solid var(--border)">
+      <div class="card-body">
+        <h3>기본 데이터 초기화</h3>
+        <p class="text-sm text-muted mb-16">13개 기본 신청서 양식과 SMS 템플릿을 초기화합니다. 기존 데이터가 있으면 건너뜁니다.</p>
+        <button class="btn btn-secondary" onclick="initDefaults()">기본값 초기화</button>
+        <span id="initResult" class="text-sm" style="margin-left:8px"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>반려 처리</h3>
+      <button class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+    </div>
+    <form method="POST" action="/admin_process">
+      <div class="modal-body">
+        <input type="hidden" name="app_id" id="rejectAppId">
+        <input type="hidden" name="action" value="reject">
+        <div class="form-group">
+          <label class="form-label">반려 사유<span class="req">*</span></label>
+          <textarea name="reject_reason" class="form-textarea" required placeholder="반려 사유를 입력하세요"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">취소</button>
+        <button type="submit" class="btn btn-danger">반려 처리</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>상세 정보</h3>
+      <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- User Edit Modal -->
+<div class="modal-overlay" id="userEditModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>직원 정보 수정</h3>
+      <button class="modal-close" onclick="closeModal('userEditModal')">&times;</button>
+    </div>
+    <form method="POST" action="/admin/user/update">
+      <div class="modal-body">
+        <input type="hidden" name="user_id" id="editUserId">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">이름</label>
+            <input type="text" name="name" id="editName" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">직급</label>
+            <input type="text" name="rank" id="editRank" class="form-input">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">부서</label>
+            <input type="text" name="dept" id="editDept" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">이메일</label>
+            <input type="email" name="email" id="editEmail" class="form-input">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">전화번호</label>
+          <input type="tel" name="phone" id="editPhone" class="form-input">
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_admin" id="editAdmin">
+          <span>관리자 권한</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('userEditModal')">취소</button>
+        <button type="submit" class="btn btn-primary">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.sms-tmpl-item{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.sms-tmpl-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.sms-tmpl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.checkbox-label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.checkbox-label input{width:16px;height:16px;accent-color:var(--accent)}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+  event.target.classList.add('active');
+}
+
+function openReject(appId) {
+  document.getElementById('rejectAppId').value = appId;
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function openDetail(btn) {
+  const raw = JSON.parse(btn.dataset.raw || '{}');
+  const attachment = btn.dataset.attachment || '';
+  let html = '<div style="display:flex;flex-direction:column;gap:10px">';
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v === 'string' && v.startsWith('http')) {
+      html += `<div><strong style="font-size:13px;color:var(--text-2)">${k}</strong><br><a href="${v}" target="_blank" style="color:var(--accent);font-size:14px">파일 보기</a></div>`;
+    } else {
+      html += `<div><strong style="font-size:13px;color:var(--text-2)">${k}</strong><br><span style="font-size:14px">${v || '-'}</span></div>`;
+    }
+  }
+  if (attachment && !Object.values(raw).includes(attachment)) {
+    html += `<div><strong style="font-size:13px;color:var(--text-2)">첨부파일</strong><br><a href="${attachment}" target="_blank" style="color:var(--accent);font-size:14px">파일 보기</a></div>`;
+  }
+  html += '</div>';
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function openUserEdit(jsonStr) {
+  const u = JSON.parse(jsonStr);
+  document.getElementById('editUserId').value = u['사번'] || '';
+  document.getElementById('editName').value = u['이름'] || '';
+  document.getElementById('editRank').value = u['직급'] || '';
+  document.getElementById('editDept').value = u['부서'] || '';
+  document.getElementById('editEmail').value = u['이메일'] || '';
+  document.getElementById('editPhone').value = u['전화번호'] || '';
+  document.getElementById('editAdmin').checked = u['is_admin'] || false;
+  document.getElementById('userEditModal').classList.add('open');
+}
+
+function initDefaults() {
+  fetch('/admin/init-defaults', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('initResult').textContent = d.message;
+      document.getElementById('initResult').style.color = d.ok ? 'var(--green)' : 'var(--red)';
+    });
+}
+
+function sendTestSMS() {
+  const phone = document.getElementById('testPhone').value;
+  const message = document.getElementById('testMsg').value;
+  fetch('/admin/sms/test', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`phone=${encodeURIComponent(phone)}&message=${encodeURIComponent(message)}`})
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('testResult');
+      el.textContent = d.message;
+      el.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+    });
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+{% endblock %}

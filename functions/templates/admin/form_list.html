@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}LOFA - 신청서 관리{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="section-header fade-in">
+    <div>
+      <h1 class="page-title">신청서 관리</h1>
+      <p class="page-subtitle" style="margin-bottom:0">신청서 항목을 추가, 수정, 삭제할 수 있습니다</p>
+    </div>
+    <a href="/admin/forms/new" class="btn btn-primary">+ 새 신청서</a>
+  </div>
+
+  {% if error %}
+  <div class="alert alert-error fade-in">{{ error }}</div>
+  {% endif %}
+
+  <!-- Form Type List -->
+  <div class="form-type-list" id="formTypeList">
+    {% for ft in forms %}
+    <div class="ft-item fade-in delay-{{ loop.index % 5 }}" data-id="{{ ft.id }}">
+      <div class="ft-drag">&#9776;</div>
+      <div class="ft-icon" style="background:color-mix(in srgb,{{ ft.color }} 12%,transparent)">
+        {{ ft.icon }}
+      </div>
+      <div class="ft-info">
+        <h3 class="ft-name">{{ ft.name }}</h3>
+        <p class="ft-desc">{{ ft.description }}</p>
+        <div class="ft-meta">
+          <span class="text-xs text-muted">ID: {{ ft.id }}</span>
+          <span class="text-xs text-muted">&middot; {{ ft.fields|length }}개 항목</span>
+          {% if ft.annual_limit > 0 %}
+          <span class="text-xs text-muted">&middot; 한도: {{ '{:,}'.format(ft.annual_limit) }}원</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="ft-actions">
+        <span class="badge {% if ft.is_active %}badge-approved{% else %}badge-cancelled{% endif %}">
+          {{ '활성' if ft.is_active else '비활성' }}
+        </span>
+        <a href="/admin/forms/{{ ft.id }}/edit" class="btn btn-secondary btn-sm">편집</a>
+        <form method="POST" action="/admin/forms/{{ ft.id }}/toggle" style="display:inline">
+          <button class="btn btn-ghost btn-sm">{{ '비활성화' if ft.is_active else '활성화' }}</button>
+        </form>
+        <form method="POST" action="/admin/forms/{{ ft.id }}/delete" style="display:inline"
+              onsubmit="return confirm('정말 삭제하시겠습니까? 신청 내역이 있으면 삭제할 수 없습니다.')">
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)">삭제</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if not forms %}
+    <div class="empty">
+      <div class="empty-icon">&#128221;</div>
+      <p class="empty-text">등록된 신청서가 없습니다</p>
+      <button class="btn btn-primary mt-16" onclick="initDefaults()">기본 신청서 13개 초기화</button>
+      <span id="initResult" class="text-sm mt-8"></span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.form-type-list{display:flex;flex-direction:column;gap:8px}
+.ft-item{
+  display:flex;align-items:center;gap:16px;
+  padding:16px 20px;background:var(--surface);border-radius:var(--radius);
+  border:1px solid var(--border);transition:var(--transition);
+}
+.ft-item:hover{box-shadow:var(--shadow-sm)}
+.ft-drag{
+  cursor:grab;color:var(--text-3);font-size:16px;flex-shrink:0;
+  user-select:none;padding:4px;
+}
+.ft-drag:active{cursor:grabbing}
+.ft-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.ft-info{flex:1;min-width:0}
+.ft-name{font-size:15px;font-weight:600;margin-bottom:1px}
+.ft-desc{font-size:13px;color:var(--text-3);margin-bottom:4px}
+.ft-meta{display:flex;gap:6px;flex-wrap:wrap}
+.ft-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap}
+
+@media(max-width:768px){
+  .ft-item{flex-wrap:wrap}
+  .ft-actions{width:100%;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)}
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function initDefaults() {
+  fetch('/admin/init-defaults', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('initResult').textContent = d.message;
+      if (d.ok) setTimeout(() => location.reload(), 1000);
+    });
+}
+
+// Drag & drop reorder
+let dragItem = null;
+document.querySelectorAll('.ft-drag').forEach(handle => {
+  const item = handle.closest('.ft-item');
+  handle.addEventListener('mousedown', () => { item.draggable = true; });
+  item.addEventListener('dragstart', e => {
+    dragItem = item;
+    item.style.opacity = '0.5';
+  });
+  item.addEventListener('dragend', () => {
+    item.style.opacity = '1';
+    item.draggable = false;
+    dragItem = null;
+    saveOrder();
+  });
+  item.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragItem && dragItem !== item) {
+      const rect = item.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (e.clientY < mid) item.before(dragItem);
+      else item.after(dragItem);
+    }
+  });
+});
+
+function saveOrder() {
+  const order = [...document.querySelectorAll('.ft-item')].map(el => el.dataset.id);
+  fetch('/admin/forms/reorder', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({order})
+  });
+}
+</script>
+{% endblock %}

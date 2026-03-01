@@ -1,0 +1,32 @@
+{
+  "functions": {
+    "source": "functions",
+    "codebase": "default",
+    "runtime": "python311",
+    "ignore": [
+      "venv",
+      ".git",
+      "firebase-debug.*.log",
+      "__pycache__",
+      "*.pyc"
+    ]
+  },
+  "firestore": {
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "lofawell",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}
