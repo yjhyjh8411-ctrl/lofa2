@@ -1,14 +1,16 @@
 { pkgs, ... }: {
-  channel = "stable-24.05";
+  channel = "stable-23.11";
 
   packages = [
-    pkgs.python311
-    pkgs.python311Packages.pip
-    pkgs.python311Packages.virtualenv
+    pkgs.python3
+    pkgs.python3Packages.pip
+    pkgs.stdenv.cc.cc.lib
     pkgs.nodejs_20
   ];
 
-  env = {};
+  env = {
+    LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib";
+  };
 
   idx = {
     extensions = [
@@ -19,18 +21,12 @@
       onCreate = {
         install = ''
           cd functions
-          python3.11 -m venv venv
+          python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
         '';
       };
-      onStart = {
-        start = ''
-          cd functions
-          source venv/bin/activate
-          python app.py &
-        '';
-      };
+      onStart = {};
     };
 
     previews = {
@@ -42,7 +38,7 @@
           ];
           manager = "web";
           env = {
-            PORT = "$PORT";
+            HOST = "0.0.0.0";
           };
         };
       };

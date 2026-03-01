@@ -37,7 +37,7 @@ if not firebase_admin._apps:
     else:
         cred = credentials.ApplicationDefault()
     firebase_admin.initialize_app(cred, {
-        'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET', 'lofa2-xxxxx.appspot.com')
+        'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET', 'lofa2-welfare.firebasestorage.app')
     })
 
 db = firestore.client()
